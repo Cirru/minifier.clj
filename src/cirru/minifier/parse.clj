@@ -12,6 +12,8 @@
 
 (def double-quote "\"")
 
+(def backslash "\\")
+
 (def specials-in-token "\"() \n\t")
 
 (def specials-in-string "\"\\\n")
@@ -121,71 +123,101 @@ nil
 
 nil
 
+(clojure.core/defn generate-char [x]
+  (clojure.core/fn [state]
+    (if (> (count (:code state)) 0)
+      (if (match-first state x)
+        (assoc state :code (subs (:code state) 1) :value nil)
+        (fail state "failed matching character"))
+      (fail state "error eof"))))
+
+(clojure.core/defn generate-char-in [xs]
+  (clojure.core/fn [state]
+    (if (> (count (:code state)) 0)
+      (if (>= (.indexOf xs (subs (:code state) 0 1)))
+        (assoc
+          state
+          :code
+          (subs (:code state) 1)
+          :value
+          (subs (:code state) 0 1))
+        (fail state "failed matching character"))
+      (fail state "error eof"))))
+
+nil
+
 (declare parse-line)
 
-(clojure.core/defn parse-eof [state])
+(clojure.core/defn parse-eof [state]
+  (clojure.core/fn [state]
+    (if (= (:code state) "")
+      (assoc state :value nil)
+      (fail state "expected eof"))))
 
-(clojure.core/defn parse-open-paren [state])
+(def parse-open-paren (generate-char open-paren))
 
-(clojure.core/defn parse-close-paren [state])
+(def parse-close-paren (generate-char close-paren))
 
-(clojure.core/defn parse-double-quote [state])
+(def parse-double-quote (generate-char double-quote))
 
-(clojure.core/defn parse-whitespace [state])
+(def parse-whitespace (generate-char whitespace))
 
-(clojure.core/defn parse-backslash [state])
+(def parse-backslash (generate-char backslash))
 
-(clojure.core/defn parse-line-break [state])
+(def parse-line-break (generate-char line-break))
 
-(clojure.core/defn parse-escaped-char [state])
+(clojure.core/defn parse-escaped-char [state]
+  (if (= (:code state) "")
+    (fail state :msg "error eof")
+    (clojure.core/cond
+      (match-first state "n") (assoc :value "\n")
+      (match-first state "t") (assoc :value "\t")
+      (match-first state "\"") (assoc :value "\"")
+      (match-first state "\\") (assoc :value "\\")
+      :else (fail state "no escaped character"))))
 
-(clojure.core/defn parse-blanks [state] (combine-many parse-blanks))
+(def parse-blanks (combine-many parse-blanks))
 
-(clojure.core/defn parse-newlines [state]
-  (combine-many parse-line-break))
+(def parse-newlines (combine-many parse-line-break))
 
-(clojure.core/defn parse-escape [state]
-  (combine-chain parse-backslash parse-escaped-char))
+(def parse-escape (combine-chain parse-backslash parse-escaped-char))
 
-(clojure.core/defn parse-token-special [state])
+(def parse-token-special (generate-char-in specials-in-token))
 
-(clojure.core/defn parse-string-special [state])
+(def parse-string-special (generate-char-in specials-in-string))
 
-(clojure.core/defn parse-token-end [state]
-  (combine-peek
-    (combine-or
-      parse-whitespace
-      parse-close-paren
-      parse-newlines
-      parse-eof)))
+(def parse-token-end
+ (combine-peek
+   (combine-or
+     parse-whitespace
+     parse-close-paren
+     parse-newlines
+     parse-eof)))
 
-(clojure.core/defn parse-in-token-char [state]
-  (combine-not parse-token-special))
+(def parse-in-token-char (combine-not parse-token-special))
 
-(clojure.core/defn parse-in-string-char [state]
-  (combine-or (combine-not parse-string-special) parse-escape))
+(def parse-in-string-char
+ (combine-or (combine-not parse-string-special) parse-escape))
 
-(clojure.core/defn parse-token [state]
-  (combine-chain (combine-many parse-in-token-char) parse-token-end))
+(def parse-token
+ (combine-chain (combine-many parse-in-token-char) parse-token-end))
 
-(clojure.core/defn parse-string [state]
-  (combine-chain
-    parse-double-quote
-    (combine-many parse-in-string-char)
-    parse-double-quote))
+(def parse-string
+ (combine-chain
+   parse-double-quote
+   (combine-many parse-in-string-char)
+   parse-double-quote))
 
-(clojure.core/defn parse-expression [state]
-  (combine-chain parse-open-paren parse-line parse-close-paren))
+(def parse-expression
+ (combine-chain parse-open-paren parse-line parse-close-paren))
 
-(clojure.core/defn parse-atom [state]
-  (combine-or parse-expression parse-token parse-string))
+(def parse-atom (combine-or parse-expression parse-token parse-string))
 
-(clojure.core/defn parse-line [state]
-  (combine-alternate parse-atom parse-blanks))
+(def parse-line (combine-alternate parse-atom parse-blanks))
 
-(clojure.core/defn parse-program [state]
-  (combine-chain
-    (combine-alternate parse-newlines parse-line)
-    parse-eof))
+(def parse-program
+ (combine-chain
+   (combine-alternate parse-newlines parse-line)
+   parse-eof))
 
-(clojure.core/defn parse [code] (parse-program initial-state))
+(def parse (parse-program initial-state))

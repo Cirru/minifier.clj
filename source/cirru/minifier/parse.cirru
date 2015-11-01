@@ -8,6 +8,7 @@ def close-paren "|)"
 def whitespace "| "
 def line-break "|\n"
 def double-quote "|\""
+def backslash "|\\"
 def specials-in-token "|\"() \n\t"
 def specials-in-string "|\"\\\n"
 
@@ -115,67 +116,104 @@ defn combine-peek (parser)
         fail state "|peek fail"
         , state
 
+-- "generators"
+
+defn generate-char (x)
+  fn (state)
+    if
+      > (count (:code state)) 0
+      if (match-first state x)
+        assoc state
+          , :code $ subs (:code state) 1
+          , :value nil
+        fail state "|failed matching character"
+      fail state "|error eof"
+
+defn generate-char-in (xs)
+  fn (state)
+    if
+      > (count (:code state)) 0
+      if
+        >= $ .indexOf xs $ subs (:code state) 0 1
+        assoc state
+          , :code $ subs (:code state) 1
+          , :value $ subs (:code state) 0 1
+        fail state "|failed matching character"
+      fail state "|error eof"
+
 -- "parsers"
 
 declare parse-line
 
 defn parse-eof (state)
+  fn (state)
+    if (= (:code state) |)
+      assoc state :value nil
+      fail state "|expected eof"
 
-defn parse-open-paren (state)
-defn parse-close-paren (state)
-defn parse-double-quote (state)
-defn parse-whitespace (state)
-defn parse-backslash (state)
-defn parse-line-break (state)
+def parse-open-paren $ generate-char open-paren
+def parse-close-paren $ generate-char close-paren
+def parse-double-quote $ generate-char double-quote
+def parse-whitespace $ generate-char whitespace
+def parse-backslash $ generate-char backslash
+def parse-line-break $ generate-char line-break
 
 defn parse-escaped-char (state)
+  if (= (:code state) |)
+    fail state :msg "|error eof"
+    cond
+      (match-first state "|n") $ assoc :value "|\n"
+      (match-first state "|t") $ assoc :value "|\t"
+      (match-first state "|\"") $ assoc :value "|\""
+      (match-first state "|\\") $ assoc :value "|\\"
+      :else $ fail state "|no escaped character"
 
-defn parse-blanks (state)
+def parse-blanks
   combine-many parse-blanks
 
-defn parse-newlines (state)
+def parse-newlines
   combine-many parse-line-break
 
-defn parse-escape (state)
+def parse-escape
   combine-chain parse-backslash parse-escaped-char
 
-defn parse-token-special (state)
+def parse-token-special $ generate-char-in specials-in-token
 
-defn parse-string-special (state)
+def parse-string-special $ generate-char-in specials-in-string
 
-defn parse-token-end (state)
+def parse-token-end
   combine-peek $ combine-or
     , parse-whitespace parse-close-paren parse-newlines parse-eof
 
-defn parse-in-token-char (state)
+def parse-in-token-char
   combine-not parse-token-special
 
-defn parse-in-string-char (state)
+def parse-in-string-char
   combine-or (combine-not parse-string-special) parse-escape
 
-defn parse-token (state)
+def parse-token
   combine-chain
     combine-many parse-in-token-char
     , parse-token-end
 
-defn parse-string (state)
+def parse-string
   combine-chain parse-double-quote
     combine-many parse-in-string-char
     , parse-double-quote
 
-defn parse-expression (state)
+def parse-expression
   combine-chain parse-open-paren parse-line parse-close-paren
 
-defn parse-atom (state)
+def parse-atom
   combine-or parse-expression parse-token parse-string
 
-defn parse-line (state)
+def parse-line
   combine-alternate parse-atom parse-blanks
 
-defn parse-program (state)
+def parse-program
   combine-chain
     combine-alternate parse-newlines parse-line
     , parse-eof
 
-defn parse (code)
+def parse
   parse-program initial-state
