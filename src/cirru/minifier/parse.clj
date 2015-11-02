@@ -40,7 +40,7 @@ nil
 
 (clojure.core/defn helper-many [state parser counter]
   (clojure.core/let [result (parser state)]
-    (if (:failed state)
+    (if (:failed result)
       (if (> counter 0) state (fail state "matching 0 times"))
       (recur
         (assoc
@@ -176,7 +176,11 @@ nil
       (match-first state "\\") (assoc :value "\\")
       :else (fail state "no escaped character"))))
 
-(def parse-blanks (combine-many parse-blanks))
+(def parse-blanks
+ (combine-value
+   (combine-many parse-whitespace)
+   (clojure.core/fn [value is-failed]
+     (if is-failed value (string/join "" value)))))
 
 (def parse-newlines (combine-many parse-line-break))
 
