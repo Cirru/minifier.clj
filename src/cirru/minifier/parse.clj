@@ -127,7 +127,7 @@ nil
   (clojure.core/fn [state]
     (if (> (count (:code state)) 0)
       (if (match-first state x)
-        (assoc state :code (subs (:code state) 1) :value nil)
+        (assoc state :code (subs (:code state) 1) :value x)
         (fail state "failed matching character"))
       (fail state "error eof"))))
 

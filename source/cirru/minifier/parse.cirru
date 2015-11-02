@@ -125,7 +125,7 @@ defn generate-char (x)
       if (match-first state x)
         assoc state
           , :code $ subs (:code state) 1
-          , :value nil
+          , :value x
         fail state "|failed matching character"
       fail state "|error eof"
 
