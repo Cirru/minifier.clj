@@ -93,8 +93,8 @@ deftest parse-in-token-char-reverse-test
   testing "|test in token char reverse" $ is $ =
     parse-in-token-char
       assoc initial-state :code "|\nb"
-    assoc initial-state :code |b :value |a :failed true
-      , :msg "|recorvered in not"
+    assoc initial-state :code |b :value "|\n" :failed true
+      , :msg "|should not be this"
 
 deftest parse-in-string-char-test
   testing "|test in string char" $ is $ =
@@ -102,8 +102,8 @@ deftest parse-in-string-char-test
       assoc initial-state :code |ab
     assoc initial-state :code |b :value |a :msg "|recorvered in not"
 
--- deftest parse-token-test
+deftest parse-token-test
   testing "|test token" $ is $ =
     parse-token
       assoc initial-state :code |ab
-    assoc initial-state :code |ab :value | :msg |initial
+    assoc initial-state :code | :value |ab :msg "|recorvered in not"

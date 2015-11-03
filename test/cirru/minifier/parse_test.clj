@@ -157,11 +157,11 @@
           :code
           "b"
           :value
-          "a"
+          "\n"
           :failed
           true
           :msg
-          "recorvered in not")))))
+          "should not be this")))))
 
 (deftest
   parse-in-string-char-test
@@ -179,4 +179,18 @@
           :msg
           "recorvered in not")))))
 
-nil
+(deftest
+  parse-token-test
+  (testing
+    "test token"
+    (is
+      (=
+        (parse-token (assoc initial-state :code "ab"))
+        (assoc
+          initial-state
+          :code
+          ""
+          :value
+          "ab"
+          :msg
+          "recorvered in not")))))

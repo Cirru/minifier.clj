@@ -39,7 +39,6 @@ nil
 nil
 
 (clojure.core/defn helper-many [state parser counter]
-  (println state counter)
   (clojure.core/let [result (parser state)]
     (if (:failed result)
       (if (> counter 0) state (fail state "matching 0 times"))
@@ -129,7 +128,9 @@ nil
     (if (> (count (:code state)) 0)
       (if (match-first state x)
         (assoc state :code (subs (:code state) 1) :value x)
-        (fail state "failed matching character"))
+        (fail
+          (assoc state :code (subs (:code state) 1) :value x)
+          "failed matching character"))
       (fail state "error eof"))))
 
 (clojure.core/defn generate-char-in [xs]
@@ -202,7 +203,16 @@ nil
                                  "\\"
                                  :code
                                  (subs (:code state) 2))
-      :else (fail state "no escaped character"))))
+      :else (assoc
+              state
+              :failed
+              true
+              :value
+              (subs (:code state) 0 1)
+              :code
+              (subs (:code state) 1)
+              :msg
+              "no escaped character"))))
 
 (def parse-blanks
  (combine-value
@@ -228,13 +238,31 @@ nil
      parse-newlines
      parse-eof)))
 
-(def parse-in-token-char (combine-not parse-token-special))
+(clojure.core/defn parse-in-token-char [state]
+  (if (= (:code state) "")
+    (fail state "error eof")
+    ((combine-not parse-token-special) state)))
 
-(def parse-in-string-char
- (combine-or (combine-not parse-string-special) parse-escaped-char))
+(clojure.core/defn parse-in-string-char [state]
+  (if (= (:code state) "")
+    (fail state "error eof")
+    (clojure.core/let [parser (combine-or
+                                (combine-not parse-string-special)
+                                parse-escaped-char)]
+      (parser state))))
 
 (def parse-token
- (combine-chain (combine-many parse-in-token-char) parse-token-end))
+ (combine-value
+   (combine-chain
+     (combine-value
+       (combine-many parse-in-token-char)
+       (clojure.core/fn [value is-failed]
+         (if is-failed nil (string/join "" value))))
+     (combine-value
+       parse-token-end
+       (clojure.core/fn [value is-failed] nil)))
+   (clojure.core/fn [value is-failed]
+     (if is-failed nil (first value)))))
 
 (def parse-string
  (combine-chain

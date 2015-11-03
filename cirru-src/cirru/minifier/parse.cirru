@@ -29,7 +29,6 @@ defn fail (state msg)
 -- "helper functions"
 
 defn helper-many (state parser counter)
-  println state counter
   let
       result $ parser state
     if (:failed result)
@@ -127,7 +126,11 @@ defn generate-char (x)
         assoc state
           , :code $ subs (:code state) 1
           , :value x
-        fail state "|failed matching character"
+        fail
+          assoc state
+            , :code $ subs (:code state) 1
+            , :value x
+          , "|failed matching character"
       fail state "|error eof"
 
 defn generate-char-in (xs)
@@ -175,7 +178,10 @@ defn parse-escaped-char (state)
         assoc state :value "|\"" :code (subs (:code state) 2)
       (match-first state "|\\")
         assoc state :value "|\\" :code (subs (:code state) 2)
-      :else $ fail state "|no escaped character"
+      :else $ assoc state :failed true
+        , :value $ subs (:code state) 0 1
+        , :code $ subs (:code state) 1
+        , :msg "|no escaped character"
 
 def parse-blanks
   combine-value
@@ -197,16 +203,30 @@ def parse-token-end
   combine-peek $ combine-or
     , parse-whitespace parse-close-paren parse-newlines parse-eof
 
-def parse-in-token-char
-  combine-not parse-token-special
+defn parse-in-token-char (state)
+  if (= (:code state) |)
+    fail state "|error eof"
+    (combine-not parse-token-special) state
 
-def parse-in-string-char
-  combine-or (combine-not parse-string-special) parse-escaped-char
+defn parse-in-string-char (state)
+  if (= (:code state) |)
+    fail state "|error eof"
+    let
+        parser $ combine-or
+          combine-not parse-string-special
+          , parse-escaped-char
+      parser state
 
 def parse-token
-  combine-chain
-    combine-many parse-in-token-char
-    , parse-token-end
+  combine-value
+    combine-chain
+      combine-value
+        combine-many parse-in-token-char
+        fn (value is-failed)
+          if is-failed nil $ string/join | value
+      combine-value parse-token-end $ fn (value is-failed) nil
+    fn (value is-failed)
+      if is-failed nil $ first value
 
 def parse-string
   combine-chain parse-double-quote
