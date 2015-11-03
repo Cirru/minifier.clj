@@ -73,7 +73,7 @@
     (is
       (=
         (parse-blanks (assoc initial-state :code "  a"))
-        (assoc initial-state :code "a" :value "  ")))))
+        (assoc initial-state :code "a" :value nil)))))
 
 (deftest
   parse-newlines-test
@@ -82,7 +82,7 @@
     (is
       (=
         (parse-newlines (assoc initial-state :code "\n\n\na"))
-        (assoc initial-state :code "a" :value "\n\n\n")))))
+        (assoc initial-state :code "a" :value nil)))))
 
 (deftest
   parse-token-special-test
@@ -194,3 +194,99 @@
           "ab"
           :msg
           "recorvered in not")))))
+
+(deftest
+  parse-string-test
+  (testing
+    "test string"
+    (is
+      (=
+        (parse-string (assoc initial-state :code "\"a\""))
+        (assoc
+          initial-state
+          :code
+          ""
+          :value
+          "a"
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-atom-in-string-test
+  (testing
+    "test atom in string"
+    (is
+      (=
+        (parse-atom (assoc initial-state :code "\"a\""))
+        (assoc
+          initial-state
+          :code
+          ""
+          :value
+          "a"
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-line-test
+  (testing
+    "test line"
+    (is
+      (=
+        (parse-line (assoc initial-state :code "a b"))
+        (assoc
+          initial-state
+          :code
+          ""
+          :value
+          (list "a" "b")
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-expression-test
+  (testing
+    "test expression"
+    (is
+      (=
+        (parse-expression (assoc initial-state :code "(a b)"))
+        (assoc
+          initial-state
+          :code
+          ""
+          :value
+          (list "a" "b")
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-line-with-exprssion-test
+  (testing
+    "test line with expression"
+    (is
+      (=
+        (parse-line (assoc initial-state :code "a (b (c d) e) f"))
+        (assoc
+          initial-state
+          :code
+          ""
+          :value
+          (list "a" (list "b" (list "c" "d") "e") "f")
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-program-test
+  (testing
+    "test program"
+    (is
+      (=
+        (parse-program (assoc initial-state :code "a (b)\nc d\n"))
+        (assoc
+          initial-state
+          :code
+          ""
+          :msg
+          "recorvered in not"
+          :value
+          (list (list "a" (list "b")) (list "c" "d")))))))

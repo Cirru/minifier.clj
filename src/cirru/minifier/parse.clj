@@ -158,10 +158,9 @@ nil
 (declare parse-line)
 
 (clojure.core/defn parse-eof [state]
-  (clojure.core/fn [state]
-    (if (= (:code state) "")
-      (assoc state :value nil)
-      (fail state "expected eof"))))
+  (if (= (:code state) "")
+    (assoc state :value nil)
+    (fail state "expected eof")))
 
 (def parse-open-paren (generate-char open-paren))
 
@@ -176,8 +175,8 @@ nil
 (def parse-line-break (generate-char line-break))
 
 (clojure.core/defn parse-escaped-char [state]
-  (if (= (:code state) "")
-    (fail state :msg "error eof")
+  (if (< (count (:code state)) 2)
+    (fail state "error eof")
     (clojure.core/cond
       (match-first state "n") (assoc
                                 state
@@ -217,14 +216,12 @@ nil
 (def parse-blanks
  (combine-value
    (combine-many parse-whitespace)
-   (clojure.core/fn [value is-failed]
-     (if is-failed value (string/join "" value)))))
+   (clojure.core/fn [value is-failed] nil)))
 
 (def parse-newlines
  (combine-value
    (combine-many parse-line-break)
-   (clojure.core/fn [value is-failed]
-     (if is-failed value (string/join "" value)))))
+   (clojure.core/fn [value is-failed] nil)))
 
 (def parse-token-special (generate-char-in specials-in-token))
 
@@ -265,21 +262,53 @@ nil
      (if is-failed nil (first value)))))
 
 (def parse-string
- (combine-chain
-   parse-double-quote
-   (combine-many parse-in-string-char)
-   parse-double-quote))
+ (combine-value
+   (combine-chain
+     parse-double-quote
+     (combine-value
+       (combine-many parse-in-string-char)
+       (clojure.core/fn [value is-failed]
+         (if is-failed nil (string/join "" value))))
+     parse-double-quote)
+   (clojure.core/fn [value is-failed]
+     (if is-failed nil (nth value 1)))))
 
-(def parse-expression
- (combine-chain parse-open-paren parse-line parse-close-paren))
+(clojure.core/defn parse-expression [state]
+  (clojure.core/let [parser (combine-value
+                              (combine-chain
+                                parse-open-paren
+                                parse-line
+                                parse-close-paren)
+                              (clojure.core/fn [value is-failed]
+                                (if is-failed nil (nth value 1))))]
+    (parser state)))
 
-(def parse-atom (combine-or parse-expression parse-token parse-string))
+(clojure.core/defn parse-atom [state]
+  (clojure.core/let [parser (combine-or
+                              parse-expression
+                              parse-token
+                              parse-string)]
+    (parser state)))
 
-(def parse-line (combine-alternate parse-atom parse-blanks))
+(clojure.core/defn parse-line [state]
+  (clojure.core/let [parser (combine-value
+                              (combine-alternate
+                                parse-atom
+                                parse-blanks)
+                              (clojure.core/fn [value is-failed]
+                                (if
+                                  is-failed
+                                  nil
+                                  (remove nil? value))))]
+    (parser state)))
 
 (def parse-program
- (combine-chain
-   (combine-alternate parse-newlines parse-line)
-   parse-eof))
+ (combine-value
+   (combine-chain
+     (combine-alternate parse-line parse-newlines)
+     parse-eof)
+   (clojure.core/fn [value is-failed]
+     (if is-failed nil (remove nil? (first value))))))
 
-(def parse (parse-program initial-state))
+(clojure.core/defn parse [code]
+  (parse-program (assoc initial-state :code code)))

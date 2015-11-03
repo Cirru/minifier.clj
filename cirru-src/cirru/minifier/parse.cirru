@@ -154,10 +154,9 @@ defn generate-char-in (xs)
 declare parse-line
 
 defn parse-eof (state)
-  fn (state)
-    if (= (:code state) |)
-      assoc state :value nil
-      fail state "|expected eof"
+  if (= (:code state) |)
+    assoc state :value nil
+    fail state "|expected eof"
 
 def parse-open-paren $ generate-char open-paren
 def parse-close-paren $ generate-char close-paren
@@ -167,8 +166,8 @@ def parse-backslash $ generate-char backslash
 def parse-line-break $ generate-char line-break
 
 defn parse-escaped-char (state)
-  if (= (:code state) |)
-    fail state :msg "|error eof"
+  if (< (count (:code state)) 2)
+    fail state "|error eof"
     cond
       (match-first state "|n")
         assoc state :value "|\n" :code (subs (:code state) 2)
@@ -186,14 +185,12 @@ defn parse-escaped-char (state)
 def parse-blanks
   combine-value
     combine-many parse-whitespace
-    fn (value is-failed)
-      if is-failed value (string/join | value)
+    fn (value is-failed) nil
 
 def parse-newlines
   combine-value
     combine-many parse-line-break
-    fn (value is-failed)
-      if is-failed value (string/join | value)
+    fn (value is-failed) nil
 
 def parse-token-special $ generate-char-in specials-in-token
 
@@ -229,23 +226,45 @@ def parse-token
       if is-failed nil $ first value
 
 def parse-string
-  combine-chain parse-double-quote
-    combine-many parse-in-string-char
-    , parse-double-quote
+  combine-value
+    combine-chain parse-double-quote
+      combine-value
+        combine-many parse-in-string-char
+        fn (value is-failed)
+          if is-failed nil $ string/join | value
+      , parse-double-quote
+    fn (value is-failed)
+      if is-failed nil $ nth value 1
 
-def parse-expression
-  combine-chain parse-open-paren parse-line parse-close-paren
+defn parse-expression (state)
+  let
+      parser $ combine-value
+        combine-chain parse-open-paren parse-line parse-close-paren
+        fn (value is-failed)
+          if is-failed nil $ nth value 1
+    parser state
 
-def parse-atom
-  combine-or parse-expression parse-token parse-string
+defn parse-atom (state)
+  let
+      parser $ combine-or parse-expression parse-token parse-string
+    parser state
 
-def parse-line
-  combine-alternate parse-atom parse-blanks
+defn parse-line (state)
+  let
+      parser $ combine-value
+        combine-alternate parse-atom parse-blanks
+        fn (value is-failed)
+          if is-failed nil $ remove nil? value
+    parser state
 
 def parse-program
-  combine-chain
-    combine-alternate parse-newlines parse-line
-    , parse-eof
+  combine-value
+    combine-chain
+      combine-alternate parse-line parse-newlines
+      , parse-eof
+    fn (value is-failed)
+      if is-failed nil $ remove nil? $ first value
 
-def parse
-  parse-program initial-state
+defn parse (code)
+  parse-program
+    assoc initial-state :code code
