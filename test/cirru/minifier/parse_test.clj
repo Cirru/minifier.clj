@@ -1,7 +1,7 @@
 
 (clojure.core/ns cirru.minifier.parse-test
   (:require [clojure.test :refer :all]
-            [cirru.minifier.parse :as parser]))
+            [cirru.minifier.parse :refer :all]))
 
 (deftest
   parse-open-paren-test
@@ -9,9 +9,8 @@
     "test open paren"
     (is
       (=
-        (parser/parse-open-paren
-          (assoc parser/initial-state :code "(a"))
-        (assoc parser/initial-state :code "a" :value "(")))))
+        (parse-open-paren (assoc initial-state :code "(a"))
+        (assoc initial-state :code "a" :value "(")))))
 
 (deftest
   parse-close-paren-test
@@ -19,9 +18,8 @@
     "test close paren"
     (is
       (=
-        (parser/parse-close-paren
-          (assoc parser/initial-state :code ")a"))
-        (assoc parser/initial-state :code "a" :value ")")))))
+        (parse-close-paren (assoc initial-state :code ")a"))
+        (assoc initial-state :code "a" :value ")")))))
 
 (deftest
   parse-double-quote-test
@@ -29,9 +27,8 @@
     "test double quote"
     (is
       (=
-        (parser/parse-double-quote
-          (assoc parser/initial-state :code "\"a"))
-        (assoc parser/initial-state :code "a" :value "\"")))))
+        (parse-double-quote (assoc initial-state :code "\"a"))
+        (assoc initial-state :code "a" :value "\"")))))
 
 (deftest
   parse-backslash-test
@@ -39,9 +36,8 @@
     "test backslash"
     (is
       (=
-        (parser/parse-backslash
-          (assoc parser/initial-state :code "\\a"))
-        (assoc parser/initial-state :code "a" :value "\\")))))
+        (parse-backslash (assoc initial-state :code "\\a"))
+        (assoc initial-state :code "a" :value "\\")))))
 
 (deftest
   parse-whitespace-test
@@ -49,9 +45,8 @@
     "test whitespace"
     (is
       (=
-        (parser/parse-whitespace
-          (assoc parser/initial-state :code " a"))
-        (assoc parser/initial-state :code "a" :value " ")))))
+        (parse-whitespace (assoc initial-state :code " a"))
+        (assoc initial-state :code "a" :value " ")))))
 
 (deftest
   parse-line-break-test
@@ -59,9 +54,17 @@
     "test line break"
     (is
       (=
-        (parser/parse-line-break
-          (assoc parser/initial-state :code "\na"))
-        (assoc parser/initial-state :code "a" :value "\n")))))
+        (parse-line-break (assoc initial-state :code "\na"))
+        (assoc initial-state :code "a" :value "\n")))))
+
+(deftest
+  parse-escaped-char-test
+  (testing
+    "test escaped char"
+    (is
+      (=
+        (parse-escaped-char (assoc initial-state :code "\\\\a"))
+        (assoc initial-state :code "a" :value "\\")))))
 
 (deftest
   parse-blanks-test
@@ -69,5 +72,5 @@
     "test blanks"
     (is
       (=
-        (parser/parse-blanks (assoc parser/initial-state :code "  a"))
-        (assoc parser/initial-state :code "a" :value "  ")))))
+        (parse-blanks (assoc initial-state :code "  a"))
+        (assoc initial-state :code "a" :value "  ")))))

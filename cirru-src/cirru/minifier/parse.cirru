@@ -162,10 +162,14 @@ defn parse-escaped-char (state)
   if (= (:code state) |)
     fail state :msg "|error eof"
     cond
-      (match-first state "|n") $ assoc :value "|\n"
-      (match-first state "|t") $ assoc :value "|\t"
-      (match-first state "|\"") $ assoc :value "|\""
-      (match-first state "|\\") $ assoc :value "|\\"
+      (match-first state "|n")
+        assoc state :value "|\n" :code (subs (:code state) 2)
+      (match-first state "|t")
+        assoc state :value "|\t" :code (subs (:code state) 2)
+      (match-first state "|\"")
+        assoc state :value "|\"" :code (subs (:code state) 2)
+      (match-first state "|\\")
+        assoc state :value "|\\" :code (subs (:code state) 2)
       :else $ fail state "|no escaped character"
 
 def parse-blanks
