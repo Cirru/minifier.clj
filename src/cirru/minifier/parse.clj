@@ -39,6 +39,7 @@ nil
 nil
 
 (clojure.core/defn helper-many [state parser counter]
+  (println state counter)
   (clojure.core/let [result (parser state)]
     (if (:failed result)
       (if (> counter 0) state (fail state "matching 0 times"))
@@ -105,7 +106,7 @@ nil
   (clojure.core/fn [state]
     (clojure.core/let [result (parser state)]
       (if (:failed result)
-        (assoc result :failed :msg "recorvered in not")
+        (assoc result :failed false :msg "recorvered in not")
         (fail result "should not be this")))))
 
 (clojure.core/defn combine-value [parser handler]
@@ -134,14 +135,21 @@ nil
 (clojure.core/defn generate-char-in [xs]
   (clojure.core/fn [state]
     (if (> (count (:code state)) 0)
-      (if (>= (.indexOf xs (subs (:code state) 0 1)))
+      (if (>= (.indexOf xs (subs (:code state) 0 1)) 0)
         (assoc
           state
           :code
           (subs (:code state) 1)
           :value
           (subs (:code state) 0 1))
-        (fail state "failed matching character"))
+        (fail
+          (assoc
+            state
+            :code
+            (subs (:code state) 1)
+            :value
+            (subs (:code state) 0 1))
+          "not in char list"))
       (fail state "error eof"))))
 
 nil
@@ -202,9 +210,11 @@ nil
    (clojure.core/fn [value is-failed]
      (if is-failed value (string/join "" value)))))
 
-(def parse-newlines (combine-many parse-line-break))
-
-(def parse-escape (combine-chain parse-backslash parse-escaped-char))
+(def parse-newlines
+ (combine-value
+   (combine-many parse-line-break)
+   (clojure.core/fn [value is-failed]
+     (if is-failed value (string/join "" value)))))
 
 (def parse-token-special (generate-char-in specials-in-token))
 
@@ -221,7 +231,7 @@ nil
 (def parse-in-token-char (combine-not parse-token-special))
 
 (def parse-in-string-char
- (combine-or (combine-not parse-string-special) parse-escape))
+ (combine-or (combine-not parse-string-special) parse-escaped-char))
 
 (def parse-token
  (combine-chain (combine-many parse-in-token-char) parse-token-end))

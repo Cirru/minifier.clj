@@ -74,3 +74,109 @@
       (=
         (parse-blanks (assoc initial-state :code "  a"))
         (assoc initial-state :code "a" :value "  ")))))
+
+(deftest
+  parse-newlines-test
+  (testing
+    "test newlines"
+    (is
+      (=
+        (parse-newlines (assoc initial-state :code "\n\n\na"))
+        (assoc initial-state :code "a" :value "\n\n\n")))))
+
+(deftest
+  parse-token-special-test
+  (testing
+    "test token special"
+    (is
+      (=
+        (parse-token-special (assoc initial-state :code "\na"))
+        (assoc initial-state :code "a" :value "\n")))))
+
+(deftest
+  parse-token-special-negative-test
+  (testing
+    "test token special nagtive"
+    (is
+      (=
+        (parse-token-special (assoc initial-state :code "ba"))
+        (assoc
+          initial-state
+          :code
+          "a"
+          :value
+          "b"
+          :failed
+          true
+          :msg
+          "not in char list")))))
+
+(deftest
+  parse-string-special-test
+  (testing
+    "test string special"
+    (is
+      (=
+        (parse-string-special (assoc initial-state :code "\na"))
+        (assoc initial-state :code "a" :value "\n")))))
+
+(deftest
+  parse-token-end-test
+  (testing
+    "test token end"
+    (is
+      (=
+        (parse-token-end (assoc initial-state :code ""))
+        (assoc initial-state :code "" :value nil)))))
+
+(deftest
+  parse-in-token-char-test
+  (testing
+    "test in token char"
+    (is
+      (=
+        (parse-in-token-char (assoc initial-state :code "ab"))
+        (assoc
+          initial-state
+          :code
+          "b"
+          :value
+          "a"
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-in-token-char-reverse-test
+  (testing
+    "test in token char reverse"
+    (is
+      (=
+        (parse-in-token-char (assoc initial-state :code "\nb"))
+        (assoc
+          initial-state
+          :code
+          "b"
+          :value
+          "a"
+          :failed
+          true
+          :msg
+          "recorvered in not")))))
+
+(deftest
+  parse-in-string-char-test
+  (testing
+    "test in string char"
+    (is
+      (=
+        (parse-in-string-char (assoc initial-state :code "ab"))
+        (assoc
+          initial-state
+          :code
+          "b"
+          :value
+          "a"
+          :msg
+          "recorvered in not")))))
+
+nil

@@ -29,6 +29,7 @@ defn fail (state msg)
 -- "helper functions"
 
 defn helper-many (state parser counter)
+  println state counter
   let
       result $ parser state
     if (:failed result)
@@ -98,7 +99,7 @@ defn combine-not (parser)
     let
         result (parser state)
       if (:failed result)
-        assoc result :failed :msg "|recorvered in not"
+        assoc result :failed false :msg "|recorvered in not"
         fail result "|should not be this"
 
 defn combine-value (parser handler)
@@ -134,11 +135,15 @@ defn generate-char-in (xs)
     if
       > (count (:code state)) 0
       if
-        >= $ .indexOf xs $ subs (:code state) 0 1
+        >= (.indexOf xs $ subs (:code state) 0 1) 0
         assoc state
           , :code $ subs (:code state) 1
           , :value $ subs (:code state) 0 1
-        fail state "|failed matching character"
+        fail
+          assoc state
+            , :code $ subs (:code state) 1
+            , :value $ subs (:code state) 0 1
+          , "|not in char list"
       fail state "|error eof"
 
 -- "parsers"
@@ -179,10 +184,10 @@ def parse-blanks
       if is-failed value (string/join | value)
 
 def parse-newlines
-  combine-many parse-line-break
-
-def parse-escape
-  combine-chain parse-backslash parse-escaped-char
+  combine-value
+    combine-many parse-line-break
+    fn (value is-failed)
+      if is-failed value (string/join | value)
 
 def parse-token-special $ generate-char-in specials-in-token
 
@@ -196,7 +201,7 @@ def parse-in-token-char
   combine-not parse-token-special
 
 def parse-in-string-char
-  combine-or (combine-not parse-string-special) parse-escape
+  combine-or (combine-not parse-string-special) parse-escaped-char
 
 def parse-token
   combine-chain
