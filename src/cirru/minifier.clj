@@ -1,12 +1,9 @@
 
 (clojure.core/ns cirru.minifier
   (:require [clojure.string :as string]
-            [cirru.minifier.stringify :as comp-stringify]))
-
-(clojure.core/defn parse [code])
+            [cirru.minifier.stringify :as comp-stringify]
+            [cirru.minifier.parse :as comp-parse]))
 
 (def stringify comp-stringify/stringify)
 
-(clojure.core/defn minifier [code])
-
-(clojure.core/defn expand [code])
+(def parse comp-parse/parse)

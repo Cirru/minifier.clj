@@ -24,5 +24,8 @@ defn stringify-expression (expression)
     string/join "| " $ map stringify-x expression
     , right-paren
 
+defn stringify-line (expression)
+  string/join "| " $ map stringify-x expression
+
 defn stringify (tree)
-  string/join "|\n" $ map stringify-expression tree
+  string/join "|\n" $ map stringify-line tree

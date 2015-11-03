@@ -23,5 +23,8 @@
     (string/join " " (map stringify-x expression))
     right-paren))
 
+(clojure.core/defn stringify-line [expression]
+  (string/join " " (map stringify-x expression)))
+
 (clojure.core/defn stringify [tree]
-  (string/join "\n" (map stringify-expression tree)))
+  (string/join "\n" (map stringify-line tree)))

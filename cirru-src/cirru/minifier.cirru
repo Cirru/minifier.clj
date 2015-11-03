@@ -3,11 +3,7 @@ ns cirru.minifier
   :require
     [] clojure.string :as string
     [] cirru.minifier.stringify :as comp-stringify
-
-defn parse (code)
+    [] cirru.minifier.parse :as comp-parse
 
 def stringify comp-stringify/stringify
-
-defn minifier (code)
-
-defn expand (code)
+def parse comp-parse/parse
